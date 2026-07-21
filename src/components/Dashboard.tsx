@@ -215,8 +215,15 @@ export function Dashboard({ snapshot }: DashboardProps) {
                       <TableCell className="text-center text-xs font-mono text-muted-foreground">
                         {idx + 1}
                       </TableCell>
-                      <TableCell className="font-semibold text-foreground text-sm">
-                        @{user.username}
+                      <TableCell className="font-semibold text-sm">
+                        <a
+                          href={`https://www.tiktok.com/@${user.username}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-foreground hover:text-[#fe2c55] hover:underline transition-all duration-200"
+                        >
+                          @{user.username}
+                        </a>
                       </TableCell>
                       <TableCell className="text-muted-foreground text-xs font-mono">
                         {user.date || "Không có thông tin ngày"}
