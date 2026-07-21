@@ -9,6 +9,7 @@ export interface FollowerSnapshot {
   timestamp: number;
   followers: TikTokUser[];
   following: TikTokUser[];
+  platform: "tiktok" | "instagram";
 }
 
 const DB_NAME = "TikTokFollowerDB";
@@ -49,7 +50,8 @@ class TikTokFollowerDB {
   public async saveSnapshot(
     label: string,
     followers: TikTokUser[],
-    following: TikTokUser[]
+    following: TikTokUser[],
+    platform: "tiktok" | "instagram"
   ): Promise<FollowerSnapshot> {
     const db = await this.init();
     const id = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
@@ -59,6 +61,7 @@ class TikTokFollowerDB {
       timestamp: Date.now(),
       followers,
       following,
+      platform,
     };
 
     return new Promise((resolve, reject) => {
@@ -87,7 +90,10 @@ class TikTokFollowerDB {
 
       request.onsuccess = () => {
         // Sắp xếp các bản ghi mới nhất lên đầu
-        const list = request.result as FollowerSnapshot[];
+        const list = (request.result as FollowerSnapshot[]).map(s => ({
+          ...s,
+          platform: s.platform || "tiktok"
+        }));
         list.sort((a, b) => b.timestamp - a.timestamp);
         resolve(list);
       };

@@ -1,0 +1,171 @@
+import type { TikTokUser } from "../db";
+
+/**
+ * Hàm phân tích cú pháp chuỗi JSON TikTok
+ * Hỗ trợ nhiều dạng cấu trúc JSON khác nhau của TikTok
+ */
+export function parseTikTokJson(jsonText: string, type: "followers" | "following" | "detect"): {
+  followers?: TikTokUser[];
+  following?: TikTokUser[];
+} {
+  try {
+    const data = JSON.parse(jsonText);
+
+    // Chuẩn hóa cấu trúc của danh sách người dùng
+    const normalizeList = (list: any[]): TikTokUser[] => {
+      if (!Array.isArray(list)) return [];
+      return list
+        .map((item: any) => {
+          const username = item.UserName || item.userName || item.username || "";
+          const date = item.Date || item.date || item.DateTime || item.dateTime || item.date_time || "";
+          return {
+            username: username.trim(),
+            date: date.trim(),
+          };
+        })
+        .filter((user) => user.username !== "");
+    };
+
+    // Tìm kiếm các trường trong JSON
+    let followers: TikTokUser[] | undefined;
+    let following: TikTokUser[] | undefined;
+
+    // 1. Dạng Followers
+    if (type === "followers" || type === "detect") {
+      const followersData = data.FollowerList || data.followerList || data.followers || data.Followers ||
+                            (data["Profile And Settings"] && data["Profile And Settings"]["Follower"] && data["Profile And Settings"]["Follower"]["FansList"]);
+      if (followersData) {
+        if (Array.isArray(followersData)) {
+          followers = normalizeList(followersData);
+        } else if (followersData.List && Array.isArray(followersData.List)) {
+          followers = normalizeList(followersData.List);
+        } else if (followersData.list && Array.isArray(followersData.list)) {
+          followers = normalizeList(followersData.list);
+        }
+      }
+    }
+
+    // 2. Dạng Following
+    if (type === "following" || type === "detect") {
+      const followingData = data.FollowingList || data.followingList || data.following || data.Following ||
+                            (data["Profile And Settings"] && data["Profile And Settings"]["Following"] && data["Profile And Settings"]["Following"]["Following"]);
+      if (followingData) {
+        if (Array.isArray(followingData)) {
+          following = normalizeList(followingData);
+        } else if (followingData.List && Array.isArray(followingData.List)) {
+          following = normalizeList(followingData.List);
+        } else if (followingData.list && Array.isArray(followingData.list)) {
+          following = normalizeList(followingData.list);
+        }
+      }
+    }
+
+    // 3. Dự phòng tìm kiếm đệ quy nếu không đúng cấu trúc chuẩn
+    if (type === "detect" && !followers && !following) {
+      // Thử tìm bất cứ mảng nào chứa UserName/Date
+      const allLists = findListsRecursive(data);
+      if (allLists.length > 0) {
+        // Dự đoán dựa trên key của mảng
+        const likelyFollowers = allLists.find(l => l.key.toLowerCase().includes("follower") || l.key.toLowerCase().includes("fan"));
+        const likelyFollowing = allLists.find(l => l.key.toLowerCase().includes("following"));
+
+        if (likelyFollowers) followers = normalizeList(likelyFollowers.list);
+        if (likelyFollowing) following = normalizeList(likelyFollowing.list);
+
+        // Nếu chỉ tìm thấy một danh sách không phân biệt được tên key
+        if (!followers && !following && allLists.length > 0) {
+          if (jsonText.toLowerCase().includes("follower") || jsonText.toLowerCase().includes("fan")) {
+            followers = normalizeList(allLists[0].list);
+          } else {
+            following = normalizeList(allLists[0].list);
+          }
+        }
+      }
+    }
+
+    return { followers, following };
+  } catch (err) {
+    console.error("Lỗi khi parse TikTok JSON:", err);
+    return {};
+  }
+}
+
+/**
+ * Tìm các mảng đối tượng có khả năng là danh sách người dùng TikTok
+ */
+function findListsRecursive(obj: any, keyName = ""): Array<{ key: string; list: any[] }> {
+  let results: Array<{ key: string; list: any[] }> = [];
+
+  if (!obj || typeof obj !== "object") return results;
+
+  if (Array.isArray(obj)) {
+    // Kiểm tra xem phần tử đầu tiên có dạng người dùng TikTok không
+    if (obj.length > 0 && typeof obj[0] === "object") {
+      const first = obj[0];
+      const hasUser = "UserName" in first || "userName" in first || "username" in first;
+      if (hasUser) {
+        results.push({ key: keyName, list: obj });
+      }
+    }
+    return results;
+  }
+
+  for (const k in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, k)) {
+      results = results.concat(findListsRecursive(obj[k], k));
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Phân tích cú pháp tệp TXT của TikTok
+ */
+export function parseTikTokTxt(txtText: string): { followers?: TikTokUser[]; following?: TikTokUser[] } {
+  const followers: TikTokUser[] = [];
+  const following: TikTokUser[] = [];
+
+  // Xác định xem đây là file followers hay following
+  const isFollowerFile = txtText.toLowerCase().includes("follower");
+  const isFollowingFile = txtText.toLowerCase().includes("following");
+
+  // Tách dòng
+  const lines = txtText.split(/\r?\n/);
+  let currentUsername = "";
+  let currentDate = "";
+
+  for (const line of lines) {
+    const cleanLine = line.trim();
+    if (!cleanLine) continue;
+
+    // Dạng dòng: "Date: 2026-07-20 21:55:00"
+    if (cleanLine.toLowerCase().startsWith("date:")) {
+      currentDate = cleanLine.substring(5).trim();
+    }
+    // Dạng dòng: "Username: username" hoặc "UserName: username"
+    else if (cleanLine.toLowerCase().startsWith("username:") || cleanLine.toLowerCase().startsWith("username :")) {
+      const idx = cleanLine.indexOf(":");
+      currentUsername = cleanLine.substring(idx + 1).trim();
+
+      if (currentUsername) {
+        const user = { username: currentUsername, date: currentDate || "Không rõ ngày" };
+        if (isFollowerFile) {
+          followers.push(user);
+        } else if (isFollowingFile) {
+          following.push(user);
+        } else {
+          // Mặc định cho vào followers
+          followers.push(user);
+        }
+        currentUsername = "";
+        currentDate = "";
+      }
+    }
+  }
+
+  return {
+    followers: followers.length > 0 ? followers : undefined,
+    following: following.length > 0 ? following : undefined,
+  };
+}

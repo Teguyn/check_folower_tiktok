@@ -1,43 +1,13 @@
 import { useState, useMemo } from "react";
-import { ArrowLeftRight, TrendingUp, UserMinus, UserPlus, Search, Copy, Check, Calendar, HelpCircle } from "lucide-react";
+import { ArrowLeftRight, TrendingUp, UserMinus, UserPlus, Search, Calendar, HelpCircle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { FollowerSnapshot } from "@/lib/db";
-
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error("Không thể sao chép:", err);
-    }
-  };
-
-  return (
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      className={`rounded-md transition-all duration-200 ${
-        copied 
-          ? "text-green-500 hover:text-green-600 hover:bg-green-500/10" 
-          : "text-muted-foreground hover:text-foreground hover:bg-muted"
-      }`}
-      onClick={handleCopy}
-      title="Sao chép tên người dùng"
-    >
-      {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-    </Button>
-  );
-}
+import { CopyButton } from "./CopyButton";
 
 interface CompareSnapshotsProps {
   snapshots: FollowerSnapshot[];
@@ -50,6 +20,7 @@ export function CompareSnapshots({ snapshots }: CompareSnapshotsProps) {
   const [targetId, setTargetId] = useState<string>("");
   const [activeTab, setActiveTab] = useState<DiffType>("unfollowers");
   const [searchQuery, setSearchQuery] = useState("");
+  const isInstagram = useMemo(() => snapshots.some(s => s.platform === "instagram"), [snapshots]);
 
   // Tìm nạp thông tin chi tiết của snapshot được chọn
   const baseSnapshot = useMemo(() => snapshots.find(s => s.id === baseId), [snapshots, baseId]);
@@ -356,7 +327,7 @@ export function CompareSnapshots({ snapshots }: CompareSnapshotsProps) {
                   <TableHeader className="bg-muted/10 sticky top-0 backdrop-blur-md">
                     <TableRow className="hover:bg-transparent border-muted/20">
                       <TableHead className="w-12 text-center text-xs">#</TableHead>
-                      <TableHead className="text-xs">Tên tài khoản (TikTok Username)</TableHead>
+                      <TableHead className="text-xs">Tên tài khoản ({isInstagram ? "Instagram Username" : "TikTok Username"})</TableHead>
                       <TableHead className="text-xs">
                         {activeTab === "unfollowers" || activeTab === "lost_following" ? "Ngày lưu trữ (Mốc cũ)" : "Ngày lưu trữ (Mốc mới)"}
                       </TableHead>
@@ -394,10 +365,12 @@ export function CompareSnapshots({ snapshots }: CompareSnapshotsProps) {
                           </TableCell>
                           <TableCell className="font-semibold text-sm">
                             <a
-                              href={`https://www.tiktok.com/@${user.username}`}
+                              href={isInstagram ? `https://www.instagram.com/${user.username}` : `https://www.tiktok.com/@${user.username}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-foreground hover:text-[#fe2c55] hover:underline transition-all duration-200"
+                              className={`text-foreground hover:underline transition-all duration-200 ${
+                                isInstagram ? "hover:text-[#e1306c]" : "hover:text-[#fe2c55]"
+                              }`}
                             >
                               @{user.username}
                             </a>

@@ -1,15 +1,17 @@
 import React, { useState, useRef } from "react";
-import { Upload, FileArchive, FileCode, FileText, AlertCircle, Loader2 } from "lucide-react";
+import { Upload, FileArchive, FileCode, FileText, AlertCircle, Loader2, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { parseUploadedFile } from "@/lib/parser";
 import type { ParsedTikTokData } from "@/lib/parser";
+import { Button } from "@/components/ui/button";
 
 interface DropZoneProps {
   onDataParsed: (data: ParsedTikTokData, fileName: string) => void;
+  platform: "tiktok" | "instagram";
 }
 
-export function DropZone({ onDataParsed }: DropZoneProps) {
+export function DropZone({ onDataParsed, platform }: DropZoneProps) {
   const [isDragActive, setIsDragActive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +35,7 @@ export function DropZone({ onDataParsed }: DropZoneProps) {
       
       if (parsedData.followers.length === 0 && parsedData.following.length === 0) {
         throw new Error(
-          "Không tìm thấy danh sách Người theo dõi (Followers) hoặc Đang theo dõi (Following) trong tệp này. Hãy chắc chắn bạn đã tải lên đúng tệp tin xuất từ TikTok."
+          "Không tìm thấy danh sách Người theo dõi (Followers) hoặc Đang theo dõi (Following) trong tệp này. Hãy chắc chắn bạn đã tải lên đúng tệp tin xuất từ TikTok hoặc Instagram."
         );
       }
       
@@ -71,11 +73,11 @@ export function DropZone({ onDataParsed }: DropZoneProps) {
     <div className="w-full max-w-2xl mx-auto my-6">
       <Card className="border-dashed border-2 border-muted-foreground/30 bg-card/50 backdrop-blur-md transition-all duration-300 hover:border-primary/50 hover:shadow-[0_0_15px_rgba(251,43,101,0.15)]">
         <CardHeader className="text-center">
-          <CardTitle className="text-xl font-bold bg-gradient-to-r from-[#fe2c55] to-[#25f4ee] bg-clip-text text-transparent">
-            Tải lên Dữ liệu TikTok của bạn
+          <CardTitle className="text-xl font-bold bg-gradient-to-r from-[#fe2c55] via-[#e1306c] to-[#fd1d1d] bg-clip-text text-transparent">
+            Tải lên Dữ liệu xuất bản của bạn
           </CardTitle>
           <CardDescription className="text-sm text-muted-foreground">
-            Kéo thả tệp ZIP, JSON hoặc TXT xuất từ TikTok để bắt đầu phân tích
+            Kéo thả tệp ZIP hoặc JSON xuất từ TikTok / Instagram để bắt đầu phân tích
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -102,7 +104,7 @@ export function DropZone({ onDataParsed }: DropZoneProps) {
               <div className="flex flex-col items-center space-y-3">
                 <Loader2 className="h-10 w-10 text-primary animate-spin" />
                 <p className="text-sm font-medium text-muted-foreground">
-                  Đang phân tích cú pháp dữ liệu TikTok... Vui lòng đợi
+                  Đang phân tích cú pháp dữ liệu... Vui lòng đợi
                 </p>
               </div>
             ) : (
@@ -116,7 +118,7 @@ export function DropZone({ onDataParsed }: DropZoneProps) {
                     Kéo thả tệp vào đây hoặc click để chọn tệp
                   </p>
                   <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                    Khuyên dùng tệp dạng <strong className="text-foreground">.ZIP</strong> (hoặc <strong className="text-foreground">Followers.json / Followers.txt</strong>) để có kết quả chính xác nhất.
+                    Khuyên dùng tệp dạng <strong className="text-foreground">.ZIP</strong> (hoặc tệp JSON lẻ: <strong className="text-foreground">Followers.json / followers_1.json</strong>) để có kết quả chính xác nhất.
                   </p>
                 </div>
 
@@ -136,6 +138,32 @@ export function DropZone({ onDataParsed }: DropZoneProps) {
                 </div>
               </div>
             )}
+          </div>
+
+          <div className="mt-5 flex justify-center">
+            <Button
+              variant="outline"
+              size="sm"
+              className={`text-xs gap-1.5 transition-all duration-300 font-semibold cursor-pointer ${
+                platform === "tiktok"
+                  ? "border-[#fe2c55]/20 hover:border-[#fe2c55]/40 hover:bg-[#fe2c55]/10 text-foreground"
+                  : "border-[#e1306c]/20 hover:border-[#e1306c]/40 hover:bg-[#e1306c]/10 text-foreground"
+              }`}
+              asChild
+            >
+              <a
+                href={
+                  platform === "tiktok"
+                    ? "https://www.tiktok.com/setting/download-your-data"
+                    : "https://www.instagram.com/download/request/"
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Yêu cầu tải dữ liệu {platform === "tiktok" ? "TikTok" : "Instagram"} từ ứng dụng gốc
+                <ExternalLink className="h-3.5 w-3.5 ml-0.5 text-muted-foreground group-hover:text-foreground" />
+              </a>
+            </Button>
           </div>
 
           {error && (

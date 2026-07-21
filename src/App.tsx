@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { 
   Users, 
   ArrowLeftRight, 
@@ -27,6 +27,7 @@ type PageType = "dashboard" | "compare" | "snapshots" | "guide";
 
 function App() {
   const [snapshots, setSnapshots] = useState<FollowerSnapshot[]>([]);
+  const [selectedPlatform, setSelectedPlatform] = useState<"tiktok" | "instagram">("tiktok");
   const [activeSnapshotId, setActiveSnapshotId] = useState<string | null>(null);
   const [activePage, setActivePage] = useState<PageType>("dashboard");
   const [loading, setLoading] = useState(true);
@@ -35,6 +36,22 @@ function App() {
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [pendingData, setPendingData] = useState<ParsedTikTokData | null>(null);
   const [newSnapshotLabel, setNewSnapshotLabel] = useState("");
+
+  const filteredSnapshots = useMemo(() => {
+    return snapshots.filter((s: FollowerSnapshot) => s.platform === selectedPlatform);
+  }, [snapshots, selectedPlatform]);
+
+  // Đồng bộ activeSnapshotId khi chuyển nền tảng hoặc danh sách snapshot thay đổi
+  useEffect(() => {
+    if (filteredSnapshots.length > 0) {
+      const exists = filteredSnapshots.some((s: FollowerSnapshot) => s.id === activeSnapshotId);
+      if (!exists) {
+        setActiveSnapshotId(filteredSnapshots[0].id);
+      }
+    } else {
+      setActiveSnapshotId(null);
+    }
+  }, [selectedPlatform, filteredSnapshots, activeSnapshotId]);
 
   // Kích hoạt Dark Mode mặc định
   useEffect(() => {
@@ -50,8 +67,9 @@ function App() {
       const list = await dbInstance.getSnapshots();
       setSnapshots(list);
       
-      // Nếu có snapshot, tự động chọn bản ghi đầu tiên (mới nhất) làm mặc định
+      // Nếu có snapshot, tự chọn platform và snapshot đầu tiên làm mặc định
       if (list.length > 0) {
+        setSelectedPlatform(list[0].platform || "tiktok");
         setActiveSnapshotId(list[0].id);
       }
     } catch (err) {
@@ -71,7 +89,8 @@ function App() {
       month: "2-digit",
       year: "numeric"
     });
-    setNewSnapshotLabel(`Xuất dữ liệu ${dateStr}`);
+    const platformName = data.platform === "instagram" ? "Instagram" : "TikTok";
+    setNewSnapshotLabel(`Xuất dữ liệu ${platformName} ${dateStr}`);
     setShowSaveDialog(true);
   };
 
@@ -83,12 +102,14 @@ function App() {
       const saved = await dbInstance.saveSnapshot(
         newSnapshotLabel.trim(),
         pendingData.followers,
-        pendingData.following
+        pendingData.following,
+        pendingData.platform
       );
       
       // Cập nhật state
       const updatedSnapshots = [saved, ...snapshots];
       setSnapshots(updatedSnapshots);
+      setSelectedPlatform(saved.platform);
       setActiveSnapshotId(saved.id);
       
       // Đóng modal và chuyển sang Dashboard
@@ -145,27 +166,37 @@ function App() {
     }
   };
 
-  const activeSnapshot = snapshots.find(s => s.id === activeSnapshotId) || null;
+  const activeSnapshot = filteredSnapshots.find((s: FollowerSnapshot) => s.id === activeSnapshotId) || null;
 
   return (
     <div className="min-h-screen bg-[#09090b] text-[#f4f4f5] font-sans antialiased selection:bg-primary/30">
       {/* Background Decor */}
-      <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-[#fe2c55]/5 to-transparent pointer-events-none" />
-      <div className="absolute top-1/4 right-1/4 w-[350px] h-[350px] bg-[#25f4ee]/3 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute top-1/3 left-1/4 w-[300px] h-[300px] bg-[#fe2c55]/3 rounded-full blur-[80px] pointer-events-none" />
+      <div className={`absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b transition-all duration-500 pointer-events-none ${
+        selectedPlatform === "tiktok" ? "from-[#fe2c55]/5" : "from-[#fd1d1d]/5"
+      } to-transparent`} />
+      <div className={`absolute top-1/4 right-1/4 w-[350px] h-[350px] rounded-full blur-[100px] transition-all duration-500 pointer-events-none ${
+        selectedPlatform === "tiktok" ? "bg-[#25f4ee]/3" : "bg-[#fcb045]/2"
+      }`} />
+      <div className={`absolute top-1/3 left-1/4 w-[300px] h-[300px] rounded-full blur-[80px] transition-all duration-500 pointer-events-none ${
+        selectedPlatform === "tiktok" ? "bg-[#fe2c55]/3" : "bg-[#833ab4]/3"
+      }`} />
 
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b border-[#27272a]/40 bg-[#09090b]/80 backdrop-blur-md">
         <div className="container mx-auto px-4 md:px-8 py-3 md:py-0 min-h-[4rem] flex flex-col md:flex-row gap-3 items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="flex items-center justify-center p-2 rounded-xl bg-gradient-to-tr from-[#fe2c55] to-[#25f4ee] text-white">
+            <div className={`flex items-center justify-center p-2 rounded-xl text-white transition-all duration-500 bg-gradient-to-tr ${
+              selectedPlatform === "tiktok" ? "from-[#fe2c55] to-[#25f4ee]" : "from-[#833ab4] via-[#fd1d1d] to-[#fcb045]"
+            }`}>
               <Users className="h-5 w-5" />
             </div>
             <div>
               <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-white to-[#a1a1aa] bg-clip-text text-transparent">
-                Tiktok Follower
+                Social Follower
               </span>
-              <span className="font-extrabold text-lg tracking-tight text-[#fe2c55] ml-1">
+              <span className={`font-extrabold text-lg tracking-tight ml-1 transition-all duration-500 ${
+                selectedPlatform === "tiktok" ? "text-[#fe2c55]" : "text-[#fd1d1d]"
+              }`}>
                 Tracker
               </span>
             </div>
@@ -218,12 +249,40 @@ function App() {
           </div>
         ) : (
           <div className="space-y-8">
+            {/* Thanh chuyển đổi Platform */}
+            <div className="flex justify-center md:justify-start">
+              <div className="flex items-center bg-[#18181b]/60 border border-muted/10 p-1 rounded-xl backdrop-blur-md">
+                <button
+                  onClick={() => setSelectedPlatform("tiktok")}
+                  className={`text-xs md:text-sm font-semibold rounded-lg transition-all px-4 py-2 flex items-center gap-1.5 cursor-pointer ${
+                    selectedPlatform === "tiktok"
+                      ? "bg-gradient-to-r from-[#fe2c55] to-[#fd1d1d] text-white shadow-[0_2px_10px_rgba(254,44,85,0.2)]"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <span className={`w-2 h-2 rounded-full transition-colors ${selectedPlatform === "tiktok" ? "bg-[#25f4ee]" : "bg-muted-foreground"}`} />
+                  TikTok
+                </button>
+                <button
+                  onClick={() => setSelectedPlatform("instagram")}
+                  className={`text-xs md:text-sm font-semibold rounded-lg transition-all px-4 py-2 flex items-center gap-1.5 cursor-pointer ${
+                    selectedPlatform === "instagram"
+                      ? "bg-gradient-to-r from-[#833ab4] via-[#fd1d1d] to-[#fcb045] text-white shadow-[0_2px_10px_rgba(253,29,29,0.2)]"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <span className={`w-2 h-2 rounded-full transition-colors ${selectedPlatform === "instagram" ? "bg-white" : "bg-muted-foreground"}`} />
+                  Instagram
+                </button>
+              </div>
+            </div>
+
             {/* Khu vực Drag & Drop nhỏ thu gọn ở trên cùng để thêm tệp mới (Chỉ hiện khi đã có dữ liệu) */}
-            {snapshots.length > 0 && (
+            {filteredSnapshots.length > 0 && (
               <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-card/20 border border-muted/10 p-4 rounded-2xl backdrop-blur-md">
                 <div className="text-center md:text-left space-y-1">
-                  <p className="text-sm font-bold text-foreground">Bạn có file xuất dữ liệu TikTok mới?</p>
-                  <p className="text-xs text-muted-foreground">Kéo thả thêm tệp ZIP mới để cập nhật mốc Snapshot so sánh.</p>
+                  <p className="text-sm font-bold text-foreground">Bạn có file xuất dữ liệu {selectedPlatform === "tiktok" ? "TikTok" : "Instagram"} mới?</p>
+                  <p className="text-xs text-muted-foreground">Kéo thả thêm tệp ZIP/JSON mới để cập nhật mốc Snapshot so sánh.</p>
                 </div>
                 <div className="w-full md:w-auto">
                   <input
@@ -240,7 +299,11 @@ function App() {
                   />
                   <Button 
                     variant="outline" 
-                    className="w-full md:w-auto h-9 text-xs border-[#fe2c55]/30 hover:bg-[#fe2c55]/10 text-foreground"
+                    className={`w-full md:w-auto h-9 text-xs transition-all duration-300 ${
+                      selectedPlatform === "tiktok" 
+                        ? "border-[#fe2c55]/30 hover:bg-[#fe2c55]/10 text-foreground" 
+                        : "border-[#fd1d1d]/30 hover:bg-[#fd1d1d]/10 text-foreground"
+                    }`}
                     onClick={() => document.getElementById("mini-file-upload")?.click()}
                   >
                     <Plus className="h-4 w-4 mr-1" />
@@ -252,29 +315,29 @@ function App() {
 
             {/* Nội dung Render theo Trang active */}
             {activePage === "dashboard" && (
-              snapshots.length === 0 ? (
+              filteredSnapshots.length === 0 ? (
                 <div className="space-y-8 animate-in fade-in duration-500">
                   <div className="text-center space-y-4 max-w-2xl mx-auto my-8 md:my-12 px-2">
                     <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl">
-                      Ai đã hủy follow TikTok của bạn?
+                      Ai đã hủy follow {selectedPlatform === "tiktok" ? "TikTok" : "Instagram"} của bạn?
                     </h1>
                     <p className="text-sm md:text-lg text-muted-foreground leading-relaxed">
                       Xác định người hủy follow cực kỳ dễ dàng và bảo mật tuyệt đối 100%. Không cần đăng nhập, không cần nhập mật khẩu.
                     </p>
                     <div className="flex flex-wrap justify-center items-center gap-2.5 text-xs text-muted-foreground/80 pt-1">
                       <span className="flex items-center gap-1.5 bg-muted/20 px-3.5 py-1.5 rounded-full shrink-0">
-                        <Heart className="h-3.5 w-3.5 text-[#fe2c55]" />
+                        <Heart className={`h-3.5 w-3.5 transition-colors ${selectedPlatform === "tiktok" ? "text-[#fe2c55]" : "text-[#fd1d1d]"}`} />
                         Bảo mật trình duyệt
                       </span>
                       <span className="flex items-center gap-1.5 bg-muted/20 px-3.5 py-1.5 rounded-full shrink-0">
-                        <ShieldAlert className="h-3.5 w-3.5 text-[#25f4ee]" />
+                        <ShieldAlert className={`h-3.5 w-3.5 transition-colors ${selectedPlatform === "tiktok" ? "text-[#25f4ee]" : "text-[#fcb045]"}`} />
                         Không cần API/Pass
                       </span>
                     </div>
                   </div>
 
-                  <DropZone onDataParsed={handleDataParsed} />
-                  <Guide />
+                  <DropZone onDataParsed={handleDataParsed} platform={selectedPlatform} />
+                  <Guide platform={selectedPlatform} />
                 </div>
               ) : (
                 activeSnapshot && <Dashboard snapshot={activeSnapshot} />
@@ -282,12 +345,12 @@ function App() {
             )}
 
             {activePage === "compare" && (
-              <CompareSnapshots snapshots={snapshots} />
+              <CompareSnapshots snapshots={filteredSnapshots} />
             )}
 
             {activePage === "snapshots" && (
               <SnapshotManager
-                snapshots={snapshots}
+                snapshots={filteredSnapshots}
                 onSelect={(id) => {
                   setActiveSnapshotId(id);
                   setActivePage("dashboard");
@@ -299,7 +362,7 @@ function App() {
             )}
 
             {activePage === "guide" && (
-              <Guide />
+              <Guide platform={selectedPlatform} />
             )}
           </div>
         )}
@@ -354,9 +417,9 @@ function App() {
       {/* Footer */}
       <footer className="mt-20 py-8 border-t border-[#27272a]/20 bg-[#09090b]/50 text-center text-xs text-muted-foreground leading-relaxed">
         <div className="container mx-auto px-4 space-y-2">
-          <p>© {new Date().getFullYear()} TikTok Follower Tracker. Thiết kế hiện đại, bảo mật và riêng tư 100%.</p>
+          <p>© {new Date().getFullYear()} Social Follower Tracker. Thiết kế hiện đại, bảo mật và riêng tư 100%.</p>
           <p className="max-w-md mx-auto text-[10px] text-muted-foreground/60">
-            Ứng dụng web này không liên kết hay được tài trợ bởi TikTok Inc. Toàn bộ dữ liệu của bạn chỉ được xử lý và lưu trữ cục bộ trong trình duyệt của bạn.
+            Ứng dụng web này không liên kết hay được tài trợ bởi bất kỳ mạng xã hội nào. Toàn bộ dữ liệu của bạn chỉ được xử lý và lưu trữ cục bộ trong trình duyệt của bạn.
           </p>
         </div>
       </footer>

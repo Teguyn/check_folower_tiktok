@@ -88,7 +88,7 @@ export function SnapshotManager({
                         <FileSpreadsheet className="h-8 w-8 text-muted-foreground/30" />
                         <p className="font-semibold text-foreground">Chưa có bản ghi nào được lưu</p>
                         <p className="text-xs text-muted-foreground max-w-xs mx-auto">
-                          Hãy tải lên tệp xuất dữ liệu TikTok ở tab đầu tiên để tạo bản ghi lịch sử đầu tiên.
+                          Hãy tải lên tệp xuất dữ liệu ở tab đầu tiên để tạo bản ghi lịch sử đầu tiên.
                         </p>
                       </div>
                     </TableCell>

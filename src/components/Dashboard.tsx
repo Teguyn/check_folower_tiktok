@@ -1,41 +1,11 @@
 import { useState, useMemo } from "react";
-import { Users, UserPlus, UserCheck, Heart, UserMinus, Search, Copy, Check } from "lucide-react";
+import { Users, UserPlus, UserCheck, Heart, UserMinus, Search } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import type { FollowerSnapshot } from "@/lib/db";
-
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error("Không thể sao chép:", err);
-    }
-  };
-
-  return (
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      className={`rounded-md transition-all duration-200 ${
-        copied 
-          ? "text-green-500 hover:text-green-600 hover:bg-green-500/10" 
-          : "text-muted-foreground hover:text-foreground hover:bg-muted"
-      }`}
-      onClick={handleCopy}
-      title="Sao chép tên người dùng"
-    >
-      {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-    </Button>
-  );
-}
+import { CopyButton } from "./CopyButton";
 
 interface DashboardProps {
   snapshot: FollowerSnapshot;
@@ -227,7 +197,7 @@ export function Dashboard({ snapshot }: DashboardProps) {
               <TableHeader className="bg-muted/10 sticky top-0 backdrop-blur-md">
                 <TableRow className="hover:bg-transparent border-muted/20">
                   <TableHead className="w-12 text-center text-xs">#</TableHead>
-                  <TableHead className="text-xs">Tên người dùng (TikTok Username)</TableHead>
+                  <TableHead className="text-xs">Tên người dùng ({snapshot.platform === "instagram" ? "Instagram Username" : "TikTok Username"})</TableHead>
                   <TableHead className="text-xs">Thời điểm follow</TableHead>
                   <TableHead className="w-24 text-right text-xs pr-6">Sao chép</TableHead>
                 </TableRow>
@@ -247,10 +217,12 @@ export function Dashboard({ snapshot }: DashboardProps) {
                       </TableCell>
                       <TableCell className="font-semibold text-sm">
                         <a
-                          href={`https://www.tiktok.com/@${user.username}`}
+                          href={snapshot.platform === "instagram" ? `https://www.instagram.com/${user.username}` : `https://www.tiktok.com/@${user.username}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-foreground hover:text-[#fe2c55] hover:underline transition-all duration-200"
+                          className={`text-foreground hover:underline transition-all duration-200 ${
+                            snapshot.platform === "instagram" ? "hover:text-[#e1306c]" : "hover:text-[#fe2c55]"
+                          }`}
                         >
                           @{user.username}
                         </a>

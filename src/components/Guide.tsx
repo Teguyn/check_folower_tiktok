@@ -1,9 +1,13 @@
-import { BookOpen, AlertCircle, FileJson, ArrowRight, Smartphone, ShieldCheck, DownloadCloud } from "lucide-react";
+import { BookOpen, AlertCircle, FileJson, ArrowRight, Smartphone, ShieldCheck, DownloadCloud, Settings, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-export function Guide() {
-  const steps = [
+interface GuideProps {
+  platform: "tiktok" | "instagram";
+}
+
+export function Guide({ platform }: GuideProps) {
+  const tiktokSteps = [
     {
       num: "01",
       title: "Vào mục Cài đặt tài khoản",
@@ -37,20 +41,62 @@ export function Guide() {
     {
       num: "06",
       title: "Kéo thả file vào web",
-      description: "Mở ứng dụng web này, kéo thả trực tiếp tệp tin ZIP vừa tải về (hoặc tệp Followers.json đã giải nén bên trong) vào khu vực kéo thả để bắt đầu quét và so sánh.",
+      description: "Mở ứng dụng web này, kéo thả trực tiếp tệp tin ZIP vừa tải về (hoặc tệp JSON đã giải nén bên trong) vào khu vực kéo thả để bắt đầu quét và so sánh.",
       icon: ShieldCheck,
     },
   ];
+
+  const instagramSteps = [
+    {
+      num: "01",
+      title: "Vào Trung tâm tài khoản",
+      description: "Mở Instagram trên điện thoại của bạn. Đi tới Trang cá nhân > Nhấn vào Menu 3 gạch ở góc trên bên phải > Chọn 'Trung tâm tài khoản' (Accounts Center) của Meta.",
+      icon: Settings,
+    },
+    {
+      num: "02",
+      title: "Chọn mục Tải thông tin",
+      description: "Chọn 'Thông tin và quyền hạn của bạn' (Your information and permissions) > Chọn 'Tải thông tin của bạn xuống' (Download your information).",
+      icon: DownloadCloud,
+    },
+    {
+      num: "03",
+      title: "Chọn lọc dữ liệu",
+      description: "Chọn 'Tải xuống hoặc chuyển giao thông tin' > Chọn tài khoản Instagram của bạn > Chọn 'Một số thông tin' > Chọn 'Người theo dõi và người đang theo dõi' (Followers and following).",
+      icon: Smartphone,
+    },
+    {
+      num: "04",
+      title: "Chọn định dạng JSON & Thấp",
+      description: "Đặt Định dạng là JSON (BẮT BUỘC). Chọn Chất lượng file là Thấp (để Meta nén nhanh nhất). Khoảng thời gian chọn 'Từ trước đến nay' rồi bấm 'Gửi yêu cầu'.",
+      icon: FileJson,
+    },
+    {
+      num: "05",
+      title: "Chờ và tải file zip về",
+      description: "Thường chỉ mất từ 5 - 15 phút. Meta sẽ gửi thông báo khi file sẵn sàng. Bạn vào lại mục 'Tải thông tin' và bấm Tải xuống (Download) để nhận file ZIP.",
+      icon: DownloadCloud,
+    },
+    {
+      num: "06",
+      title: "Kéo thả file vào web",
+      description: "Mở web này, kéo thả trực tiếp tệp ZIP tải về (hoặc tệp followers_1.json lẻ bên trong) vào khu vực tải tệp để quét đối chiếu.",
+      icon: ShieldCheck,
+    },
+  ];
+
+  const steps = platform === "tiktok" ? tiktokSteps : instagramSteps;
+  const platformName = platform === "tiktok" ? "TikTok" : "Instagram";
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto animate-in fade-in duration-300">
       <div>
         <h2 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
           <BookOpen className="h-6 w-6 text-primary" />
-          Hướng dẫn lấy tệp dữ liệu từ TikTok
+          Hướng dẫn lấy tệp dữ liệu từ {platformName}
         </h2>
         <p className="text-muted-foreground text-sm">
-          Vì bảo mật dữ liệu, TikTok chỉ cung cấp danh sách người theo dõi thông qua tệp xuất dữ liệu cá nhân. Dưới đây là cách thực hiện.
+          Vì bảo mật, {platformName} chỉ cung cấp danh sách người theo dõi thông qua tệp xuất dữ liệu cá nhân của chính bạn.
         </p>
       </div>
 
@@ -58,7 +104,7 @@ export function Guide() {
         <AlertCircle className="h-4 w-4" />
         <AlertTitle className="font-semibold text-sm">Lưu ý quan trọng</AlertTitle>
         <AlertDescription className="text-xs leading-relaxed mt-1">
-          Hãy chắc chắn bạn đã chọn định dạng <strong className="text-foreground">JSON</strong> khi yêu cầu dữ liệu. Dữ liệu này được xử lý hoàn toàn **nội bộ trên máy tính của bạn**. Web không gửi bất kỳ thông tin nào lên máy chủ, tuyệt đối không có rủi ro rò rỉ tài khoản hay bị ban.
+          Hãy chắc chắn bạn đã chọn định dạng <strong className="text-foreground">JSON</strong> khi yêu cầu dữ liệu. Dữ liệu này được xử lý hoàn toàn **nội bộ trên máy tính của bạn**. Web không gửi bất kỳ thông tin nào lên máy chủ, tuyệt đối không có rủi ro bảo mật.
         </AlertDescription>
       </Alert>
 
@@ -86,6 +132,22 @@ export function Guide() {
             </Card>
           );
         })}
+      </div>
+
+      <div className="mt-8 flex justify-center">
+        <a
+          href={platform === "tiktok" ? "https://www.tiktok.com/setting/download-your-data" : "https://www.instagram.com/download/request/"}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`inline-flex items-center gap-2 px-5 py-3 rounded-xl border transition-all duration-300 font-semibold text-sm cursor-pointer shadow-md ${
+            platform === "tiktok"
+              ? "bg-[#fe2c55]/10 hover:bg-[#fe2c55]/20 border-[#fe2c55]/20 text-[#fe2c55]"
+              : "bg-[#e1306c]/10 hover:bg-[#e1306c]/20 border-[#e1306c]/20 text-[#e1306c]"
+          }`}
+        >
+          Nhấp để mở nhanh trang tải dữ liệu {platformName} trên Web
+          <ExternalLink className="h-4 w-4" />
+        </a>
       </div>
     </div>
   );
