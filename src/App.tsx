@@ -290,10 +290,31 @@ function App() {
                     id="mini-file-upload"
                     className="hidden"
                     accept=".zip,.json,.txt"
+                    multiple
                     onChange={async (e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        const parsed = await parseUploadedFile(e.target.files[0]);
-                        handleDataParsed(parsed, e.target.files[0].name);
+                      if (e.target.files && e.target.files.length > 0) {
+                        const fileList = Array.from(e.target.files);
+                        if (fileList.length === 1) {
+                          const parsed = await parseUploadedFile(fileList[0]);
+                          handleDataParsed(parsed, fileList[0].name);
+                        } else {
+                          let mergedFollowers: any[] = [];
+                          let mergedFollowing: any[] = [];
+                          let detectedPlatform: "tiktok" | "instagram" = "instagram";
+                          for (const file of fileList) {
+                            const parsed = await parseUploadedFile(file);
+                            if (parsed.platform) {
+                              detectedPlatform = parsed.platform;
+                            }
+                            mergedFollowers = mergedFollowers.concat(parsed.followers);
+                            mergedFollowing = mergedFollowing.concat(parsed.following);
+                          }
+                          handleDataParsed({
+                            followers: mergedFollowers,
+                            following: mergedFollowing,
+                            platform: detectedPlatform
+                          }, `Gộp ${fileList.length} tệp (${detectedPlatform === "instagram" ? "Instagram" : "TikTok"})`);
+                        }
                       }
                     }}
                   />

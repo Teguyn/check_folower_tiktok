@@ -29,7 +29,19 @@ export function parseInstagramJson(jsonText: string): TikTokUser[] {
       .map((item: any) => {
         const stringListData = item.string_list_data;
         if (Array.isArray(stringListData) && stringListData.length > 0) {
-          const username = stringListData[0].value || "";
+          let username = stringListData[0].value || "";
+          if (!username && item.title) {
+            username = item.title;
+          }
+          if (!username && stringListData[0].href) {
+            const href = stringListData[0].href;
+            const urlParts = href.replace(/\/$/, "").split("/");
+            const lastPart = urlParts[urlParts.length - 1];
+            if (lastPart && lastPart !== "_u") {
+              username = lastPart;
+            }
+          }
+
           const timestamp = stringListData[0].timestamp || 0;
           let date = "";
           if (timestamp) {

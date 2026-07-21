@@ -27,19 +27,49 @@ export function DropZone({ onDataParsed, platform }: DropZoneProps) {
     }
   };
 
-  const processFile = async (file: File) => {
+  const processFiles = async (files: FileList | File[]) => {
     setLoading(true);
     setError(null);
     try {
-      const parsedData = await parseUploadedFile(file);
-      
-      if (parsedData.followers.length === 0 && parsedData.following.length === 0) {
-        throw new Error(
-          "Không tìm thấy danh sách Người theo dõi (Followers) hoặc Đang theo dõi (Following) trong tệp này. Hãy chắc chắn bạn đã tải lên đúng tệp tin xuất từ TikTok hoặc Instagram."
-        );
+      const fileList = Array.from(files);
+      if (fileList.length === 0) return;
+
+      if (fileList.length === 1) {
+        const file = fileList[0];
+        const parsedData = await parseUploadedFile(file);
+        
+        if (parsedData.followers.length === 0 && parsedData.following.length === 0) {
+          throw new Error(
+            "Không tìm thấy danh sách Người theo dõi (Followers) hoặc Đang theo dõi (Following) trong tệp này. Hãy chắc chắn bạn đã tải lên đúng tệp tin xuất từ TikTok hoặc Instagram."
+          );
+        }
+        onDataParsed(parsedData, file.name);
+      } else {
+        let mergedFollowers: any[] = [];
+        let mergedFollowing: any[] = [];
+        let detectedPlatform: "tiktok" | "instagram" = "instagram";
+
+        for (const file of fileList) {
+          const parsed = await parseUploadedFile(file);
+          if (parsed.platform) {
+            detectedPlatform = parsed.platform;
+          }
+          mergedFollowers = mergedFollowers.concat(parsed.followers);
+          mergedFollowing = mergedFollowing.concat(parsed.following);
+        }
+
+        if (mergedFollowers.length === 0 && mergedFollowing.length === 0) {
+          throw new Error(
+            "Không tìm thấy danh sách Người theo dõi hoặc Đang theo dõi trong các tệp tin được tải lên."
+          );
+        }
+
+        onDataParsed({
+          followers: mergedFollowers,
+          following: mergedFollowing,
+          platform: detectedPlatform
+        }, `Gộp ${fileList.length} tệp (${detectedPlatform === "instagram" ? "Instagram" : "TikTok"})`);
       }
-      
-      onDataParsed(parsedData, file.name);
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Đã xảy ra lỗi không xác định khi phân tích tệp.");
@@ -53,15 +83,15 @@ export function DropZone({ onDataParsed, platform }: DropZoneProps) {
     e.stopPropagation();
     setIsDragActive(false);
 
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      await processFile(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      await processFiles(e.dataTransfer.files);
     }
   };
 
   const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
-    if (e.target.files && e.target.files[0]) {
-      await processFile(e.target.files[0]);
+    if (e.target.files && e.target.files.length > 0) {
+      await processFiles(e.target.files);
     }
   };
 
@@ -96,6 +126,7 @@ export function DropZone({ onDataParsed, platform }: DropZoneProps) {
               type="file"
               className="hidden"
               accept=".zip,.json,.txt"
+              multiple
               onChange={handleChange}
               disabled={loading}
             />
@@ -118,7 +149,7 @@ export function DropZone({ onDataParsed, platform }: DropZoneProps) {
                     Kéo thả tệp vào đây hoặc click để chọn tệp
                   </p>
                   <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                    Khuyên dùng tệp dạng <strong className="text-foreground">.ZIP</strong> (hoặc tệp JSON lẻ: <strong className="text-foreground">Followers.json / followers_1.json</strong>) để có kết quả chính xác nhất.
+                    Khuyên dùng tệp dạng <strong className="text-foreground">.ZIP</strong>. Hoặc chọn/kéo thả đồng thời cả hai tệp <strong className="text-foreground">followers_1.json</strong> và <strong className="text-foreground">following.json</strong> để gộp dữ liệu.
                   </p>
                 </div>
 
