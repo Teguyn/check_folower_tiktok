@@ -61,3 +61,55 @@ export function parseInstagramJson(jsonText: string): TikTokUser[] {
     return [];
   }
 }
+
+/**
+ * Hàm phân tích cú pháp chuỗi JSON Yêu cầu follow gần đây của Instagram
+ */
+export function parseInstagramRecentFollowRequests(jsonText: string): TikTokUser[] {
+  try {
+    const data = JSON.parse(jsonText);
+    const list = Array.isArray(data) ? data : [];
+    
+    return list
+      .map((item: any) => {
+        const timestamp = item.timestamp || 0;
+        let date = "";
+        if (timestamp) {
+          const d = new Date(timestamp * 1000);
+          date = d.toLocaleString("vi-VN");
+        }
+
+        let username = "";
+        const labelValues = item.label_values;
+        if (Array.isArray(labelValues)) {
+          const usernameObj = labelValues.find(
+            (lv: any) => 
+              lv.label === "Tên người dùng" || 
+              lv.label === "username" || 
+              lv.label === "Username"
+          );
+          if (usernameObj) {
+            username = usernameObj.value || "";
+          }
+          
+          if (!username) {
+            const nameObj = labelValues.find(
+              (lv: any) => lv.label === "Tên" || lv.label === "name" || lv.label === "Name"
+            );
+            if (nameObj) {
+              username = nameObj.value || "";
+            }
+          }
+        }
+
+        return {
+          username: username.trim(),
+          date
+        };
+      })
+      .filter((u: any) => u.username !== "");
+  } catch (err) {
+    console.error("Lỗi khi parse Instagram Recent Follow Requests JSON:", err);
+    return [];
+  }
+}

@@ -103,7 +103,8 @@ function App() {
         newSnapshotLabel.trim(),
         pendingData.followers,
         pendingData.following,
-        pendingData.platform
+        pendingData.platform,
+        pendingData.recentFollowRequests
       );
       
       // Cập nhật state

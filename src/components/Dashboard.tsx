@@ -11,7 +11,7 @@ interface DashboardProps {
   snapshot: FollowerSnapshot;
 }
 
-type TabType = "all_followers" | "all_following" | "mutuals" | "fans" | "idols";
+type TabType = "all_followers" | "all_following" | "mutuals" | "fans" | "idols" | "recent_requests";
 
 export function Dashboard({ snapshot }: DashboardProps) {
   const [activeTab, setActiveTab] = useState<TabType>("mutuals");
@@ -19,6 +19,7 @@ export function Dashboard({ snapshot }: DashboardProps) {
 
   const followers = snapshot.followers || [];
   const following = snapshot.following || [];
+  const recentRequests = snapshot.recentFollowRequests || [];
 
   // Tạo Maps để tra cứu nhanh
   const followersMap = useMemo(() => new Map(followers.map(u => [u.username.toLowerCase(), u])), [followers]);
@@ -50,10 +51,12 @@ export function Dashboard({ snapshot }: DashboardProps) {
         return fans;
       case "idols":
         return idols;
+      case "recent_requests":
+        return recentRequests;
       default:
         return [];
     }
-  }, [activeTab, followers, following, mutuals, fans, idols]);
+  }, [activeTab, followers, following, mutuals, fans, idols, recentRequests]);
 
   // Lọc theo tìm kiếm
   const filteredList = useMemo(() => {
@@ -106,6 +109,17 @@ export function Dashboard({ snapshot }: DashboardProps) {
     },
   ];
 
+  if (recentRequests.length > 0) {
+    stats.push({
+      title: "Yêu cầu follow",
+      value: recentRequests.length,
+      description: "Yêu cầu theo dõi gần đây",
+      icon: UserPlus,
+      color: "text-blue-500 bg-blue-500/10",
+      tab: "recent_requests" as TabType,
+    });
+  }
+
   const getTabLabel = (tab: TabType) => {
     switch (tab) {
       case "all_followers": return "Người theo dõi";
@@ -113,6 +127,7 @@ export function Dashboard({ snapshot }: DashboardProps) {
       case "mutuals": return "Bạn chung";
       case "fans": return "Người hâm mộ";
       case "idols": return "Thần tượng";
+      case "recent_requests": return "Yêu cầu follow";
     }
   };
 
@@ -128,7 +143,7 @@ export function Dashboard({ snapshot }: DashboardProps) {
       </div>
 
       {/* Grid thẻ thông tin */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className={`grid gap-4 md:grid-cols-2 ${stats.length > 5 ? "lg:grid-cols-3 xl:grid-cols-6" : "lg:grid-cols-5"}`}>
         {stats.map((stat) => {
           const Icon = stat.icon;
           const isSelected = activeTab === stat.tab;
@@ -198,7 +213,7 @@ export function Dashboard({ snapshot }: DashboardProps) {
                 <TableRow className="hover:bg-transparent border-muted/20">
                   <TableHead className="w-12 text-center text-xs">#</TableHead>
                   <TableHead className="text-xs">Tên người dùng ({snapshot.platform === "instagram" ? "Instagram Username" : "TikTok Username"})</TableHead>
-                  <TableHead className="text-xs">Thời điểm follow</TableHead>
+                  <TableHead className="text-xs">{activeTab === "recent_requests" ? "Thời điểm yêu cầu" : "Thời điểm follow"}</TableHead>
                   <TableHead className="w-24 text-right text-xs pr-6">Sao chép</TableHead>
                 </TableRow>
               </TableHeader>

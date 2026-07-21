@@ -10,6 +10,7 @@ export interface FollowerSnapshot {
   followers: TikTokUser[];
   following: TikTokUser[];
   platform: "tiktok" | "instagram";
+  recentFollowRequests?: TikTokUser[];
 }
 
 const DB_NAME = "TikTokFollowerDB";
@@ -51,7 +52,8 @@ class TikTokFollowerDB {
     label: string,
     followers: TikTokUser[],
     following: TikTokUser[],
-    platform: "tiktok" | "instagram"
+    platform: "tiktok" | "instagram",
+    recentFollowRequests?: TikTokUser[]
   ): Promise<FollowerSnapshot> {
     const db = await this.init();
     const id = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
@@ -62,6 +64,7 @@ class TikTokFollowerDB {
       followers,
       following,
       platform,
+      recentFollowRequests,
     };
 
     return new Promise((resolve, reject) => {

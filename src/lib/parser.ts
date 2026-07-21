@@ -1,16 +1,17 @@
 import JSZip from "jszip";
 import type { TikTokUser } from "./db";
 import { parseTikTokJson, parseTikTokTxt } from "./parsers/tiktok";
-import { parseInstagramJson } from "./parsers/instagram";
+import { parseInstagramJson, parseInstagramRecentFollowRequests } from "./parsers/instagram";
 
 export interface ParsedTikTokData {
   followers: TikTokUser[];
   following: TikTokUser[];
   platform: "tiktok" | "instagram";
+  recentFollowRequests?: TikTokUser[];
 }
 
 // Re-export specific parser functions just in case they are used elsewhere
-export { parseTikTokJson, parseTikTokTxt, parseInstagramJson };
+export { parseTikTokJson, parseTikTokTxt, parseInstagramJson, parseInstagramRecentFollowRequests };
 
 /**
  * Hàm chính xử lý phân tích tệp kéo thả (ZIP, JSON, TXT) cho cả TikTok và Instagram
@@ -24,6 +25,7 @@ export async function parseUploadedFile(file: File): Promise<ParsedTikTokData> {
       const zip = await JSZip.loadAsync(file);
       let followers: TikTokUser[] = [];
       let following: TikTokUser[] = [];
+      let recentFollowRequests: TikTokUser[] = [];
       let isInstagramZip = false;
 
       // Kiểm tra xem zip này là của TikTok hay Instagram
@@ -40,9 +42,10 @@ export async function parseUploadedFile(file: File): Promise<ParsedTikTokData> {
       if (platform === "instagram") {
         zip.forEach((relativePath, zipEntry) => {
           const entryName = relativePath.toLowerCase();
+          const fileNameOnly = entryName.split("/").pop() || "";
           if (entryName.endsWith(".json")) {
             // followers_1.json, followers_2.json ...
-            if (entryName.includes("follower")) {
+            if (fileNameOnly.includes("follower")) {
               const promise = zipEntry.async("text").then((content) => {
                 const parsedList = parseInstagramJson(content);
                 followers = followers.concat(parsedList);
@@ -50,10 +53,18 @@ export async function parseUploadedFile(file: File): Promise<ParsedTikTokData> {
               filePromises.push(promise);
             }
             // following.json
-            else if (entryName.includes("following")) {
+            else if (fileNameOnly.includes("following")) {
               const promise = zipEntry.async("text").then((content) => {
                 const parsedList = parseInstagramJson(content);
                 following = following.concat(parsedList);
+              });
+              filePromises.push(promise);
+            }
+            // recent_follow_requests.json
+            else if (fileNameOnly.includes("recent_follow_requests")) {
+              const promise = zipEntry.async("text").then((content) => {
+                const parsedList = parseInstagramRecentFollowRequests(content);
+                recentFollowRequests = recentFollowRequests.concat(parsedList);
               });
               filePromises.push(promise);
             }
@@ -63,12 +74,13 @@ export async function parseUploadedFile(file: File): Promise<ParsedTikTokData> {
         // TikTok
         zip.forEach((relativePath, zipEntry) => {
           const entryName = relativePath.toLowerCase();
+          const fileNameOnly = entryName.split("/").pop() || "";
           const isJson = entryName.endsWith(".json");
           const isTxt = entryName.endsWith(".txt");
 
           if (isJson || isTxt) {
-            const isFollowersFile = entryName.includes("follower");
-            const isFollowingFile = entryName.includes("following");
+            const isFollowersFile = fileNameOnly.includes("follower");
+            const isFollowingFile = fileNameOnly.includes("following");
 
             if (isFollowersFile || isFollowingFile) {
               const promise = zipEntry.async("text").then((content) => {
@@ -113,7 +125,7 @@ export async function parseUploadedFile(file: File): Promise<ParsedTikTokData> {
         await Promise.all(backupPromises);
       }
 
-      return { followers, following, platform };
+      return { followers, following, platform, recentFollowRequests };
     } catch (err) {
       console.error("Lỗi khi giải nén và phân tích ZIP:", err);
       throw new Error("Không thể đọc tệp ZIP. Vui lòng đảm bảo tệp tin ZIP xuất dữ liệu không bị lỗi.");
@@ -123,6 +135,15 @@ export async function parseUploadedFile(file: File): Promise<ParsedTikTokData> {
   // 2. XỬ LÝ FILE JSON LẺ
   if (fileName.endsWith(".json")) {
     const text = await file.text();
+    if (fileName.includes("recent_follow_requests")) {
+      const parsedList = parseInstagramRecentFollowRequests(text);
+      return {
+        followers: [],
+        following: [],
+        recentFollowRequests: parsedList,
+        platform: "instagram"
+      };
+    }
     if (text.includes("string_list_data")) {
       const parsedList = parseInstagramJson(text);
       if (fileName.includes("follower")) {
