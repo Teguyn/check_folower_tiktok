@@ -1,11 +1,41 @@
 import { useState, useMemo } from "react";
-import { Users, UserPlus, UserCheck, Heart, UserMinus, Search, ExternalLink } from "lucide-react";
+import { Users, UserPlus, UserCheck, Heart, UserMinus, Search, Copy, Check } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { FollowerSnapshot } from "@/lib/db";
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Không thể sao chép:", err);
+    }
+  };
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      className={`rounded-md transition-all duration-200 ${
+        copied 
+          ? "text-green-500 hover:text-green-600 hover:bg-green-500/10" 
+          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+      }`}
+      onClick={handleCopy}
+      title="Sao chép tên người dùng"
+    >
+      {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+    </Button>
+  );
+}
 
 interface DashboardProps {
   snapshot: FollowerSnapshot;
@@ -199,7 +229,7 @@ export function Dashboard({ snapshot }: DashboardProps) {
                   <TableHead className="w-12 text-center text-xs">#</TableHead>
                   <TableHead className="text-xs">Tên người dùng (TikTok Username)</TableHead>
                   <TableHead className="text-xs">Thời điểm follow</TableHead>
-                  <TableHead className="w-24 text-right text-xs pr-6">Liên kết</TableHead>
+                  <TableHead className="w-24 text-right text-xs pr-6">Sao chép</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -229,20 +259,7 @@ export function Dashboard({ snapshot }: DashboardProps) {
                         {user.date || "Không có thông tin ngày"}
                       </TableCell>
                       <TableCell className="text-right pr-6">
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          className="text-primary hover:text-primary-foreground hover:bg-primary/20 rounded-md"
-                          asChild
-                        >
-                          <a
-                            href={`https://www.tiktok.com/@${user.username}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <ExternalLink className="h-3.5 w-3.5" />
-                          </a>
-                        </Button>
+                        <CopyButton text={user.username} />
                       </TableCell>
                     </TableRow>
                   ))
