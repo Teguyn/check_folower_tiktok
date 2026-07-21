@@ -38,7 +38,8 @@ export function parseTikTokJson(jsonText: string, type: "followers" | "following
 
     // 1. Dạng Followers
     if (type === "followers" || type === "detect") {
-      const followersData = data.FollowerList || data.followerList || data.followers || data.Followers;
+      const followersData = data.FollowerList || data.followerList || data.followers || data.Followers ||
+                            (data["Profile And Settings"] && data["Profile And Settings"]["Follower"] && data["Profile And Settings"]["Follower"]["FansList"]);
       if (followersData) {
         if (Array.isArray(followersData)) {
           followers = normalizeList(followersData);
@@ -52,7 +53,8 @@ export function parseTikTokJson(jsonText: string, type: "followers" | "following
 
     // 2. Dạng Following
     if (type === "following" || type === "detect") {
-      const followingData = data.FollowingList || data.followingList || data.following || data.Following;
+      const followingData = data.FollowingList || data.followingList || data.following || data.Following ||
+                            (data["Profile And Settings"] && data["Profile And Settings"]["Following"] && data["Profile And Settings"]["Following"]["Following"]);
       if (followingData) {
         if (Array.isArray(followingData)) {
           following = normalizeList(followingData);
@@ -70,7 +72,7 @@ export function parseTikTokJson(jsonText: string, type: "followers" | "following
       const allLists = findListsRecursive(data);
       if (allLists.length > 0) {
         // Dự đoán dựa trên key của mảng
-        const likelyFollowers = allLists.find(l => l.key.toLowerCase().includes("follower"));
+        const likelyFollowers = allLists.find(l => l.key.toLowerCase().includes("follower") || l.key.toLowerCase().includes("fan"));
         const likelyFollowing = allLists.find(l => l.key.toLowerCase().includes("following"));
 
         if (likelyFollowers) followers = normalizeList(likelyFollowers.list);
@@ -78,7 +80,7 @@ export function parseTikTokJson(jsonText: string, type: "followers" | "following
 
         // Nếu chỉ tìm thấy một danh sách không phân biệt được tên key
         if (!followers && !following && allLists.length > 0) {
-          if (jsonText.toLowerCase().includes("follower")) {
+          if (jsonText.toLowerCase().includes("follower") || jsonText.toLowerCase().includes("fan")) {
             followers = normalizeList(allLists[0].list);
           } else {
             following = normalizeList(allLists[0].list);
